@@ -1,0 +1,19 @@
+============================= test session starts =============================
+platform win32 -- Python 3.8.1, pytest-5.3.5, py-1.8.1, pluggy-0.13.1
+rootdir: C:\cygwin64\home\mike\.local\lib\python3.7\site-packages
+plugins: testdox-1.2.1
+collected 6 items
+
+pygameapi\test_pygameapi.py                                                                                
+dev_mode
+ ✓ pgui. DEV is False if dev mode is not called
+ ✓ pgui. DEV is True if dev mode is called
+                                                                               
+user_quit
+ ✓ Returns False if user does not quit
+ ✓ Returns True if user clicks red x
+ ✓ Returns True if user presses Ctrl q
+ ✓ Returns True if user presses q
+                                                                         [100%]
+
+============================== 6 passed in 0.62s ==============================

@@ -1,0 +1,14 @@
+============================= test session starts =============================
+platform win32 -- Python 3.8.1, pytest-5.3.5, py-1.8.1, pluggy-0.13.1
+rootdir: C:\cygwin64\home\mike\.local\lib\python3.7\site-packages
+plugins: testdox-1.2.1
+collected 3 items
+
+pygameapi\test_pygameapi.py                                                                                
+user_quit
+\x1b[92m \u2713 Returns False if user does not quit\x1b[0m
+\x1b[92m \u2713 Returns True if user clicks red x\x1b[0m
+\x1b[92m \u2713 Returns True if user presses q\x1b[0m
+                                                                         [100%]
+
+============================== 3 passed in 0.21s ==============================
