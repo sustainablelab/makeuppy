@@ -241,9 +241,9 @@ def evaluate(cmd):
         if cmd == 'start':
             # Return a user event the same as the START button press
             pass
-        else: return empty
+        else: return None # unnecessary, but it makes an explicit placeholder
     # TODO: add more checks here for other types of cmdline entry
-    else: return None
+    else: return None # unnecessary, but it makes an explicit placeholder
 
 Window = namedtuple('Window', [ 'cols', 'rows' ])
 
