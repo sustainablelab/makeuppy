@@ -1,17 +1,20 @@
 import pygame
 from collections import namedtuple
 
+# USEREVENTS defined by pygameapi
+UI_CMD = 0
+
 DEV = False
 def get_dev_mode(): return DEV
-def dev_mode(onoff_flag=True):
+def set_dev_mode(onoff_flag=True):
     """Enable development mode functionality.
 
     Behavior
     --------
-    pgui.DEV is False if dev_mode is called with False
-    pgui.DEV is False if dev_mode is not called
-    pgui.DEV is True if dev_mode is called with True
-    pgui.DEV is True if dev_mode is called with no argument
+    pgui.DEV is False if set_dev_mode is called with False
+    pgui.DEV is False if set_dev_mode is not called
+    pgui.DEV is True if set_dev_mode is called with True
+    pgui.DEV is True if set_dev_mode is called with no argument
 
     Examples
     --------
@@ -21,19 +24,25 @@ def dev_mode(onoff_flag=True):
 
     2. Enable dev mode
     import pygameapi as pgui
-    pgui.dev_mode()         # Turn on dev mode
+    pgui.set_dev_mode()         # Turn on dev mode
     # or
-    pgui.dev_mode(True)     # Turn on dev mode
+    pgui.set_dev_mode(True)     # Turn on dev mode
 
     3. Disable dev mode *after* it is enabled
     import pygameapi as pgui
-    pgui.dev_mode(True)     # Turn on dev mode
+    pgui.set_dev_mode(True)     # Turn on dev mode
     # ...some time later in the program...
-    pgui.dev_mode(False)    # Turn off dev mode
+    pgui.set_dev_mode(False)    # Turn off dev mode
 
     """
     global DEV
     DEV = onoff_flag
+
+CMD = False
+def get_cmd_mode(): return CMD
+def set_cmd_mode(onoff_flag=True):
+    global CMD
+    CMD = onoff_flag
 
 def user_quit(event, key_pressed, key_mods):
     """
@@ -78,7 +87,10 @@ def user_quit(event, key_pressed, key_mods):
         or  (_user_held_Ctrl(key_mods)
             and _user_pressed_q(key_pressed)
             )
-        or _dev( _user_pressed_q(key_pressed) )
+        or  (
+            _dev( _user_pressed_q(key_pressed))
+            and not _cmd()
+            )
         )
 
 def user_opens_cmdline(key_pressed, key_mods):
@@ -98,6 +110,140 @@ def user_closes_cmdline(key_pressed):
     Returns True if user presses Esc
     """
     return _user_pressed_Esc(key_pressed)
+
+def get_arg(swp):
+    """
+    Return string found between '(' and ')' in input string
+    'swp'.
+
+    Returns empty string for common cases that cause Python
+    built-in 'eval()' to throw an error message.
+
+    Where possible, return a message to help the user correct
+    their input expression.
+
+    Parameters
+    ----------
+    'swp'
+        String with parentheses
+        Example: "eval('1+1')"
+
+    Behavior
+    --------
+    Returns Missing ')' if input string is missing )
+    Returns Missing '(' if input string is missing (
+    Returns empty string if input string is ()
+    Returns empty string if input string is ("")
+    Returns empty string if input string is ("   ")
+    Returns empty string if input string is ('')
+    Returns empty string if input string is ('   ')
+    Returns help message if eval expression is not a string
+    Returns help message if quotes are mismatched
+    Returns help message if string inside () is only one character
+    Returns subset of input string that is inside parentheses
+
+    Reference
+    ---------
+    https://docs.python.org/3/library/stdtypes.html#mutable-sequence-types
+    https://docs.python.org/3/library/stdtypes.html#string-methods
+    """
+    # Check for missing parentheses
+    if swp.find('(') == -1: return ["Missing '('"]
+    if swp.find(')') == -1: return ["Missing ')'"]
+    # Check for mismatched parentheses
+    if swp.count('(') != swp.count(')'): return [f"Missing parentheses somewhere"]
+    # Get string between (), eliminate surrounding whitespace
+    after_open = swp.split('(',maxsplit=1)[1]
+    inside = after_open.rsplit(')',maxsplit=1)[0].strip()
+    # Check for truly empty input ()
+    if len(inside) == 0: return ''
+    # If not empty, it must start with a quote mark
+    qm = inside[0]
+    # Check expression part of arg is a string
+    if qm != "'" and qm != '"': return ["Expression must be a string"]
+    # Check for missing closing quote
+    if len(inside) == 1: return [f"Missing closing {qm}"]
+    # Check for mistmatched quotes
+    if inside.count(qm)%2 != 0: return [f"Missing {qm} somewhere"]
+    # Check for creative ways to send empty input
+    using_single_quotes = inside[0] == "'"
+    using_double_quotes = inside[0] == '"'
+    if using_single_quotes:
+        if (
+            inside.split("'")[1] == ''
+            or
+            inside.split("'")[1].isspace()
+            ):
+            return ''
+    if using_double_quotes:
+        if (
+            inside.split('"')[1] == ''
+            or
+            inside.split('"')[1].isspace()
+            ):
+            return ''
+    # Success: string inside parentheses is OK to eval... maybe...
+    return inside
+
+def evaluate(cmd):
+    """
+    Activate 'cmdline' with : to start a COLON command.
+    Return values are displayed on the 'cmdoutput' line.
+
+    COLON command types
+    -------------------
+    :eval(expression)
+        Evaluate with Python builtin 'eval'
+        Example:
+            :eval('1+1')
+            2
+    """
+    # COLON commands
+    if cmd[0] == ':':
+        # strip leading `:`
+        cmd = cmd[1:]
+        if cmd[0:4] == 'eval':
+            # EVAL EXPRESSIONS
+            empty = ''
+            """
+                Return an empty 'str' when:
+                    The expression cannot be evaluated and there is no
+                    obvious mistake to notify the user, like a missing
+                    quote or parentheses.
+                Examples when empty is appropriate:
+                    :eval('')
+                    :eval()
+                    :eval("    ")
+            """
+            arg = get_arg(cmd)
+            # arg is empty: ()
+            if arg == empty: return empty
+            # arg mistake is obvious
+            """
+                Return a 'list' when:
+                    The expression cannot be evaluated and the
+                    mistake is obvious.
+                    List element 0 is a helpful message to display
+                    in the 'cmdoutput'.
+                Examples when a helpful message is appropriate:
+                    :eval('print()) # user forgot "'"
+                    :eval('print()' # user forgot ")"
+            """
+            if type(arg) == list: return arg[0]
+            arg = eval(arg)
+            if type(arg) == str: return eval(arg)
+            # If user includes optional global dict or local dict,
+            # eval(get_arg(cmd)) returns a tuple.
+            if type(arg) == tuple:
+                if len(arg) == 2: return eval(arg[0],arg[1])
+                if len(arg) == 3: return eval(arg[0],arg[1],arg[2])
+        # TODO: add more checks here for other COLON commands
+        if cmd == 'start':
+            # Return a user event the same as the START button press
+            pass
+        else: return empty
+    # TODO: add more checks here for other types of cmdline entry
+    else: return None
 
 Window = namedtuple('Window', [ 'cols', 'rows' ])
 
@@ -202,7 +348,8 @@ Color = namedtuple(
     )
 
 # ---Helpers---
-def _dev(condition): return DEV and condition
+def _dev(condition=True): return DEV and condition
+def _cmd(condition=True): return CMD and condition
 
 def _user_clicked_red_x(event): return event.type == pygame.QUIT
 

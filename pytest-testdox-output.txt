@@ -2,18 +2,18 @@
 platform win32 -- Python 3.8.1, pytest-5.3.5, py-1.8.1, pluggy-0.13.1
 rootdir: C:\cygwin64\home\mike\.local\lib\python3.7\site-packages
 plugins: testdox-1.2.1
-collected 6 items
+collected 34 items / 26 deselected / 8 selected
 
 pygameapi\test_pygameapi.py                                                                                
-dev_mode
- ✓ pgui. DEV is False if dev mode is not called
- ✓ pgui. DEV is True if dev mode is called
-                                                                               
-user_quit
- ✓ Returns False if user does not quit
- ✓ Returns True if user clicks red x
- ✓ Returns True if user presses Ctrl q
- ✓ Returns True if user presses q
+evaluate
+ ✓ Evaluates ":eval(expression)" by returning Python builtin 'eval(expression)'
+ ✓ Evaluates expressions that use a global dict
+ ✓ Evaluates expressions that use global and local dicts
+ ✓ Evaluates simple expressions like ":eval('1+1')"
+ ✓ Ignores whitespace inside the parentheses
+ ✓ Returns empty string if cmd input is ":eval()"
+ ✓ Returns empty string if cmd input is ":eval('')"
+ ✓ Returns empty string if cmd input is ':eval("")'
                                                                          [100%]
 
-============================== 6 passed in 0.62s ==============================
+====================== 8 passed, 26 deselected in 0.24s =======================

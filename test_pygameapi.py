@@ -7,18 +7,15 @@ VIM USAGE:
         - see https://docs.pytest.org/en/latest/usage.html#cmdline
 """
 import pygameapi as pgui # -- module under test
-# from pygameapi import _get_dev_mode
-from pygameapi import dev_mode
 # unit test framework
 import unittest
-from unittest.mock import patch
 import pygame
 # use namedtuple to fake pygame function return values
 from collections import namedtuple
 # use numpy to fake pygame function return values
 import numpy as np
 
-class dev_mode(unittest.TestCase):
+class set_dev_mode(unittest.TestCase):
     def setUp(self):
         """Restore default state of pygameapi.
         
@@ -31,7 +28,7 @@ class dev_mode(unittest.TestCase):
         ------
         Reset DEV between tests.
         DEV is global.
-        Call dev_mode(True) changes DEV to True.
+        Call set_dev_mode(True) changes DEV to True.
         """
         pgui.DEV=False
 
@@ -50,18 +47,18 @@ class dev_mode(unittest.TestCase):
         self.assertFalse(pgui.DEV)
 
     def test_pgui_DOT_DEV_is_True_if_dev_UNDERSCORE_mode_is_called_with_True(self):
-        pgui.dev_mode(True)
+        pgui.set_dev_mode(True)
         self.assertTrue(pgui.get_dev_mode())
 
     def test_pgui_DOT_DEV_is_True_if_dev_UNDERSCORE_mode_is_called_with_no_argument(self):
-        pgui.dev_mode()
+        pgui.set_dev_mode()
         self.assertTrue(pgui.get_dev_mode())
 
     def test_pgui_DOT_DEV_is_False_if_dev_UNDERSCORE_mode_is_called_with_False(self):
         # =====[ Setup ]=====
-        pgui.dev_mode(True)
+        pgui.set_dev_mode(True)
         # =====[ Operate ]=====
-        pgui.dev_mode(False)
+        pgui.set_dev_mode(False)
         # =====[ Test ]=====
         self.assertFalse(pgui.get_dev_mode())
 
@@ -72,7 +69,7 @@ class user_quit(unittest.TestCase):
         --------------------------------------
         Usage:
             # Test dev mode functionality by enabling dev mode
-            dev_mode()
+            set_dev_mode()
 
         Fake syntax for a pygame 'event'
         --------------------------------
@@ -101,7 +98,7 @@ class user_quit(unittest.TestCase):
             key_mods = pygame.key.get_mods()
         """
         # dev mode disabled
-        pgui.dev_mode(False)
+        pgui.set_dev_mode(False)
 
         # define event.type datatype for faking events
         self.Event = namedtuple('FakePygameEvent', ['type'])
@@ -150,7 +147,7 @@ class user_quit(unittest.TestCase):
         # =====[ Setup ]=====
 
         # Enable dev mode
-        pgui.dev_mode()
+        pgui.set_dev_mode()
 
         # Fake event: do not click red x
         event = self.Event(type=pygame.QUIT+42)
@@ -237,3 +234,77 @@ class window_size(unittest.TestCase):
         win = pgui.Window( cols=nc, rows=nr )
         # =====[ Operate ]=====
         self.assertEqual( pgui.window_size(win), (nc,nr) )
+
+class get_arg(unittest.TestCase):
+    def test_Returns_help_message_if_input_string_is_missing_OPENPAREN(self):
+        arg = "'1+x',{'x':3}"
+        missing_open = f"eval{arg})"
+        self.assertEqual(["Missing '('"], pgui.get_arg(missing_open))
+    def test_Returns_help_message_if_input_string_is_missing_CLOSEPAREN(self):
+        arg = "'1+x',{'x':3}"
+        missing_close = f"eval({arg}"
+        self.assertEqual(["Missing ')'"], pgui.get_arg(missing_close))
+    def test_Returns_empty_string_if_input_string_is_OPENPARENCLOSEPAREN(self):
+        empty_inside = "eval()"
+        self.assertEqual('', pgui.get_arg(empty_inside))
+    def test_Returns_help_message_if_eval_expression_is_not_a_string(self):
+        self.assertEqual(["Expression must be a string"], pgui.get_arg("eval(2)"))
+    def test_Returns_help_message_if_string_inside_OPENPARENCLOSEPAREN_is_only_one_character(self):
+        qm = "'"
+        self.assertEqual([f"Missing closing {qm}"], pgui.get_arg(f"eval({qm})"))
+        qm = '"'
+        self.assertEqual([f"Missing closing {qm}"], pgui.get_arg(f"eval({qm})"))
+    def test_Returns_help_message_if_quotes_are_mismatched(self):
+        qm = "'"
+        self.assertEqual([f"Missing {qm} somewhere"], pgui.get_arg(f"eval({qm}2)"))
+        qm = '"'
+        self.assertEqual([f"Missing {qm} somewhere"], pgui.get_arg(f"eval({qm}2)"))
+    def test_Returns_empty_string_if_input_string_is_OPENPARENSQUOTESQUOTECLOSEPAREN(self):
+        empty_inside = "eval('')"
+        self.assertEqual('', pgui.get_arg(empty_inside))
+    def test_Returns_empty_string_if_input_string_is_OPENPARENSQUOTE___SQUOTECLOSEPAREN(self):
+        empty_inside = "eval('   ')"
+        self.assertEqual('', pgui.get_arg(empty_inside))
+    def test_Returns_empty_string_if_input_string_is_OPENPARENDQUOTEDQUOTECLOSEPAREN(self):
+        empty_inside = 'eval("")'
+        self.assertEqual('', pgui.get_arg(empty_inside))
+    def test_Returns_empty_string_if_input_string_is_OPENPARENDQUOTE___DQUOTECLOSEPAREN(self):
+        empty_inside = 'eval("   ")'
+        self.assertEqual('', pgui.get_arg(empty_inside))
+    def test_Returns_subset_of_input_string_that_is_inside_parentheses(self):
+        arg = "'1+1'"
+        self.assertEqual(arg, pgui.get_arg(f"eval({arg})"))
+        arg = "'1+x',{'x':3}"
+        self.assertEqual(arg, pgui.get_arg(f"eval({arg})"))
+
+class evaluate(unittest.TestCase):
+    def test_Evaluates_DQUOTECOLONevalOPENPARENexpressionCLOSEPARENDQUOTE_by_returning_Python_builtin_SQUOTEevalOPENPARENexpressionCLOSEPARENSQUOTE(self):
+        cmd = ":eval('1')"
+        self.assertEqual(1, pgui.evaluate(cmd))
+    def test_Evaluates_simple_expressions_like_DQUOTECOLONevalOPENPARENSQUOTE1PLUS1SQUOTECLOSEPARENDQUOTE(self):
+        cmd = ":eval('1+1')"
+        self.assertEqual(2, pgui.evaluate(cmd))
+    def test_Evaluates_expressions_that_use_a_global_dict(self):
+        cmd = ":eval('1+x',{'x':5})"
+        self.assertEqual(6, pgui.evaluate(cmd))
+    def test_Evaluates_expressions_that_use_global_and_local_dicts(self):
+        cmd = ":eval('1+x+a_local',{'x':5},{'a_local':2})"
+        self.assertEqual(8, pgui.evaluate(cmd))
+    def test_Returns_empty_string_if_cmd_input_is_DQUOTECOLONevalOPENPARENCLOSEPARENDQUOTE(self):
+        cmd = ":eval()"
+        empty = ''
+        self.assertEqual('', pgui.evaluate(cmd))
+    def test_Returns_empty_string_if_cmd_input_is_DQUOTECOLONevalOPENPARENSQUOTESQUOTECLOSEPARENDQUOTE(self):
+        cmd = ":eval('')"
+        empty = ''
+        self.assertEqual('', pgui.evaluate(cmd))
+    def test_Returns_empty_string_if_cmd_input_is_SQUOTECOLONevalOPENPARENDQUOTEDQUOTECLOSEPARENSQUOTE(self):
+        cmd = ':eval("")'
+        empty = ''
+        self.assertEqual('', pgui.evaluate(cmd))
+    def test_Ignores_whitespace_inside_the_parentheses(self):
+        empty = ''
+        cmd = ':eval( "" )'
+        self.assertEqual('', pgui.evaluate(cmd))
+        cmd = ':eval( " " )'
+        self.assertEqual('', pgui.evaluate(cmd))
