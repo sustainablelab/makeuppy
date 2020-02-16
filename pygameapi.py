@@ -198,13 +198,15 @@ def evaluate(cmd):
             :eval('1+1')
             2
     """
+    # Catch 0-length commands (happens if user erases ':' and hits ENTER)
+    empty = ''
+    if len(cmd) == 0: return empty
     # COLON commands
     if cmd[0] == ':':
         # strip leading `:`
         cmd = cmd[1:]
         if cmd[0:4] == 'eval':
             # EVAL EXPRESSIONS
-            empty = ''
             """
                 Return an empty 'str' when:
                     The expression cannot be evaluated and there is no
@@ -241,9 +243,11 @@ def evaluate(cmd):
         if cmd == 'start':
             # Return a user event the same as the START button press
             pass
-        else: return None # unnecessary, but it makes an explicit placeholder
+        # else: return None # unnecessary, but it makes an explicit placeholder
+        else: return 'ERROR: Command not recognized'
     # TODO: add more checks here for other types of cmdline entry
-    else: return None # unnecessary, but it makes an explicit placeholder
+    # else: return None # unnecessary, but it makes an explicit placeholder
+    else: return 'ERROR: Start commands with colon (:)'
 
 Window = namedtuple('Window', [ 'cols', 'rows' ])
 
