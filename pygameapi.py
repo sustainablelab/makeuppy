@@ -1,5 +1,6 @@
 import pygame
 from collections import namedtuple
+import sys # catch and return eval errors as string instead of halting
 
 # USEREVENTS defined by pygameapi
 UI_CMD = 0
@@ -111,138 +112,152 @@ def user_closes_cmdline(key_pressed):
     """
     return _user_pressed_Esc(key_pressed)
 
-def get_arg(swp):
-    """
-    Return string found between '(' and ')' in input string
-    'swp'.
-
-    Returns empty string for common cases that cause Python
-    built-in 'eval()' to throw an error message.
-
-    Where possible, return a message to help the user correct
-    their input expression.
-
-    Parameters
-    ----------
-    'swp'
-        String with parentheses
-        Example: "eval('1+1')"
-
-    Behavior
-    --------
-    Returns Missing ')' if input string is missing )
-    Returns Missing '(' if input string is missing (
-    Returns empty string if input string is ()
-    Returns empty string if input string is ("")
-    Returns empty string if input string is ("   ")
-    Returns empty string if input string is ('')
-    Returns empty string if input string is ('   ')
-    Returns help message if eval expression is not a string
-    Returns help message if quotes are mismatched
-    Returns help message if string inside () is only one character
-    Returns subset of input string that is inside parentheses
-
-    Reference
-    ---------
-    https://docs.python.org/3/library/stdtypes.html#mutable-sequence-types
-    https://docs.python.org/3/library/stdtypes.html#string-methods
-    """
-    # Check for missing parentheses
-    if swp.find('(') == -1: return ["Missing '('"]
-    if swp.find(')') == -1: return ["Missing ')'"]
-    # Check for mismatched parentheses
-    if swp.count('(') != swp.count(')'): return [f"Missing parentheses somewhere"]
-    # Get string between (), eliminate surrounding whitespace
-    after_open = swp.split('(',maxsplit=1)[1]
-    inside = after_open.rsplit(')',maxsplit=1)[0].strip()
-    # Check for truly empty input ()
-    if len(inside) == 0: return ''
-    # If not empty, it must start with a quote mark
-    qm = inside[0]
-    # Check expression part of arg is a string
-    if qm != "'" and qm != '"': return ["Expression must be a string"]
-    # Check for missing closing quote
-    if len(inside) == 1: return [f"Missing closing {qm}"]
-    # Check for mistmatched quotes
-    if inside.count(qm)%2 != 0: return [f"Missing {qm} somewhere"]
-    # Check for creative ways to send empty input
-    using_single_quotes = inside[0] == "'"
-    using_double_quotes = inside[0] == '"'
-    if using_single_quotes:
-        if (
-            inside.split("'")[1] == ''
-            or
-            inside.split("'")[1].isspace()
-            ):
-            return ''
-    if using_double_quotes:
-        if (
-            inside.split('"')[1] == ''
-            or
-            inside.split('"')[1].isspace()
-            ):
-            return ''
-    # Success: string inside parentheses is OK to eval... maybe...
-    return inside
-
 def evaluate(cmd):
     """
     Activate 'cmdline' with : to start a COLON command.
     Return values are displayed on the 'cmdoutput' line.
 
+    'evaluate(cmd)' returns a string (at best).
+    It is up to the application to make the commands do something
+    useful.
+
+    Some commands do not even return a string.
+
     COLON command types
     -------------------
     :eval(expression)
-        Evaluate with Python builtin 'eval'
-        Example:
+        Evaluate with Python builtin 'eval'.
+        Response to eval is an empty string to let the
+        application perform the eval:
+
+        Application Snippet
+        -------------------
+        if event.text.startswith(':'): cmdtext = event.text[1:]
+            if cmdtext[0:4] == 'eval':
+                try: cmdoutput.set_text(str(eval(cmdtext)))
+                except:
+                    cmdoutput.text_colour = pygame.Color(color_hex.tardis)
+                    cmdoutput.set_text(str(sys.exc_info()[1]))
+
+        The benefit of 'eval' is to call application functions.
+        The idea is to make the GUI like a REPL with all the
+        application globals imported.
+
+        To make the application functions visible to 'eval', it
+        must be called in the application, i.e., 'eval' is useful
+        when eval('__name__') returns __main__. 'eval' is not
+        useful when eval('__name__') returns pygameapi.pygameapi
+
+        Example: (command line responses)
             :eval('1+1')
             2
+
+            :eval('1+x',{'x':3})
+            4
+
+            :eval('1+x+a_local',{'x':5},{'a_local':2})
+            8
+
+            :eval('__name__')
+            __main__
+
+            :eval(__name__)
+            name '__main__' is not defined
+
+    :echo(expression)
+        Calls 'eval' on 'expression'.
+
+        Unlike ':eval', ':echo' calls 'eval' inside pygameapi.
+        The application does not require any additional code to
+        make ':echo' work. Simply output the response from calling
+        evaluate(cmd).
+
+        Since the 'eval' is done inside pygameapi, 'echo' is only
+        useful for toy examples. But the command line gets a more
+        flexible than with 'eval'. It is useful for doing quick
+        math at the command line.
+
+        Example: (command line responses)
+            :echo '1+1'
+            '1+1'
+
+            :echo (1+1)
+            2
+
+            :echo 1+1
+            2
+
+            :echo __name__
+            pygameapi.pygameapi
+
+    :start
+        Command to start the monochromator sweep.
+        Return an 'OK' message.
+    
+        Application Snippet -- Producer
+        -------------------
+        # Generate event, like clicking a START button
+        if cmd == 'start': # press button
+            start_sweep = pygame.event.Event(
+                pygame.USEREVENT,
+                    {'user_type': pgui.UI_CMD,
+                     'ui_cmd': cmd
+                    })
+                    pygame.event.post(start_sweep)
+
+        Application Snippet -- Consumer
+        -------------------
+        # Consume event
+        if event.type == pygame.USEREVENT:
+            if event.user_type == pgui.UI_CMD and event.ui_cmd == 'start':
+                pass # put code here to start collecting data
+
+        Application Snippet -- View
+        -------------------
+        # Format response to ':start' returned by evaluate(cmd)
+        if event.type == pygame.USEREVENT:
+            if event.user_type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
+
+                # Stop blinking the cursor on the command line
+                if cmdline.selected: manager.unselect_focus_element()
+
+                # Default color for responses
+                cmdoutput.text_colour = save_color
+
+                # Get response by calling 'evaluate()'
+                response = str(pgui.evaluate(event.text))
+
+                # Format the response
+                if response.startswith('ERROR'):
+                    # Color ERROR responses red
+                    cmdoutput.text_colour = pygame.Color(color_hex.taffy)
+                elif response.startswith('OK'):
+                    # Color OK responses green
+                    cmdoutput.text_colour = pygame.Color(color_hex.saltwatertaffy)
+                    # Strip the "OK: " from the response message
+                    response = response.lstrip('OK: ')
     """
     # Catch 0-length commands (happens if user erases ':' and hits ENTER)
     empty = ''
     if len(cmd) == 0: return empty
     # COLON commands
-    if cmd[0] == ':':
+    if cmd.startswith(':'):
         # strip leading `:`
         cmd = cmd[1:]
-        if cmd[0:4] == 'eval':
-            # EVAL EXPRESSIONS
-            """
-                Return an empty 'str' when:
-                    The expression cannot be evaluated and there is no
-                    obvious mistake to notify the user, like a missing
-                    quote or parentheses.
-                Examples when empty is appropriate:
-                    :eval('')
-                    :eval()
-                    :eval("    ")
-            """
-            arg = get_arg(cmd)
-            # arg is empty: ()
-            if arg == empty: return empty
-            # arg mistake is obvious
-            """
-                Return a 'list' when:
-                    The expression cannot be evaluated and the
-                    mistake is obvious.
-                    List element 0 is a helpful message to display
-                    in the 'cmdoutput'.
-                Examples when a helpful message is appropriate:
-                    :eval('print()) # user forgot "'"
-                    :eval('print()' # user forgot ")"
-            """
-            if type(arg) == list: return arg[0]
-            arg = eval(arg)
-            if type(arg) == str: return eval(arg)
-            # If user includes optional global dict or local dict,
-            # eval(get_arg(cmd)) returns a tuple.
-            if type(arg) == tuple:
-                if len(arg) == 2: return eval(arg[0],arg[1])
-                if len(arg) == 3: return eval(arg[0],arg[1],arg[2])
+        if cmd[0:4] == 'eval': return empty
         # TODO: add more checks here for other COLON commands
+        if cmd == 'q':
+            # Return a user event same as quitting
+            return empty
+        if cmd.startswith('echo'):
+            args = cmd.lstrip('echo').strip()
+            try: return eval(args)
+            except: return "ERROR: " + str(sys.exc_info()[1])
         if cmd == 'start':
-            # Return a user event the same as the START button press
-            pass
+            # Application returns a user event the same as the
+            # START button press.
+            # This package just returns a message.
+            return 'OK: Starting monochromator sweep...'
         # else: return None # unnecessary, but it makes an explicit placeholder
         else: return 'ERROR: Command not recognized'
     # TODO: add more checks here for other types of cmdline entry
@@ -307,7 +322,45 @@ _badwolf_color_names = [
     'coffee',         # (199,145,91)    = ['c7915b', 173]
     'darkroast'       # (136,99,63)     = ['88633f', 95]
     ]
-_badwolf_color_values = (
+_badwolf_color_HEX_values = (
+    # Normal text.
+    '#f8f6f2',
+    # Pure and simple.
+    '#ffffff',
+    '#000000',
+    # Gravel colors based on a brown from Clouds Midnight.
+    '#d9cec3',
+    '#998f84',
+    '#857f78',
+    '#666462',
+    '#45413b',
+    '#35322d',
+    '#242321',
+    '#1c1b1a',
+    '#141413',
+    # From highlight in photo of a glass of Dale's Pale Ale on my desk.
+    '#fade3e',
+    # A beautiful tan from Tomorrow Night.
+    '#f4cf86',
+    # Delicious, chewy red from Made of Code for poppiest highlights.
+    '#ff2c4b',
+    # Another chewy accent, but use sparingly!
+    '#8cffba',
+    # Use for things that denote 'where the user is'
+    '#0a9dff',
+    # This one's from Mustang, not Florida!
+    '#ffa724',
+    # A limier green from Getafe.
+    '#aeee00',
+    # Rose's dress in The Idiot's Lantern.
+    '#ff9eb8',
+    # Another play on the brown from Clouds Midnight.
+    '#b88853',
+    # Also based on that Clouds Midnight brown.
+    '#c7915b',
+    '#88633f',
+    )
+_badwolf_color_RGB_values = (
     # Normal text.
     (248,246,242),
     # Pure and simple.
@@ -345,10 +398,15 @@ _badwolf_color_values = (
     (199,145,91),
     (136,99,63)
     )
-Color = namedtuple(
-    'Color',
+ColorRGB = namedtuple(
+    'ColorRGB',
     _badwolf_color_names,
-    defaults=_badwolf_color_values
+    defaults=_badwolf_color_RGB_values
+    )
+ColorHEX = namedtuple(
+    'ColorHEX',
+    _badwolf_color_names,
+    defaults=_badwolf_color_HEX_values
     )
 
 # ---Helpers---
