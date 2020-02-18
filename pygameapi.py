@@ -1,6 +1,8 @@
 import pygame
+import pygame_gui
 from collections import namedtuple
 import sys # catch and return eval errors as string instead of halting
+import os # get path to this package
 
 # USEREVENTS defined by pygameapi
 UI_CMD = 0
@@ -44,6 +46,24 @@ def get_cmd_mode(): return CMD
 def set_cmd_mode(onoff_flag=True):
     global CMD
     CMD = onoff_flag
+
+_pygameapi_path = os.path.dirname(__file__)
+_costume_path = os.path.join(_pygameapi_path, 'costume')
+# ROOT_PATH = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+# THEME_PATH = os.path.normpath(os.path.join(ROOT_PATH, 'data/default_theme.json'))
+def set_icon(icon=f'{_costume_path}/mike-icon.jpg'):
+    """Use this icon in upper left of window.
+
+    Icon is not visible in fullscreen mode.
+    """
+    pygame.display.set_icon(pygame.image.load(icon))
+
+def new_ui_manager(gui_win, theme=f'{_costume_path}/theme.json'):
+    """Return a new instance of the pygame_gui UIManager.
+
+    I made this wrapper to set my default theme.json.
+    """
+    return pygame_gui.UIManager(window_size(gui_win), theme)
 
 def user_quit(event, key_pressed, key_mods):
     """

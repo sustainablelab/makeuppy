@@ -2,7 +2,7 @@
 platform win32 -- Python 3.8.1, pytest-5.3.5, py-1.8.1, pluggy-0.13.1
 rootdir: C:\cygwin64\home\mike\.local\lib\python3.7\site-packages
 plugins: testdox-1.2.1
-collected 34 items
+collected 16 items
 
 pygameapi\test_pygameapi.py                                                                                
 set_dev_mode
@@ -32,28 +32,8 @@ Window
 window_size
  ✓ Returns tuple width,height
                                                                                
-get_arg
- ✓ Returns empty string if input string is ()
- ✓ Returns empty string if input string is ("")
- ✓ Returns empty string if input string is ("   ")
- ✓ Returns empty string if input string is ('')
- ✓ Returns empty string if input string is ('   ')
- ✓ Returns help message if eval expression is not a string
- ✓ Returns help message if input string is missing )
- ✓ Returns help message if input string is missing (
- ✓ Returns help message if quotes are mismatched
- ✓ Returns help message if string inside () is only one character
- ✓ Returns subset of input string that is inside parentheses
-                                                                               
 evaluate
- ✓ Evaluates ":eval(expression)" by returning Python builtin 'eval(expression)'
- ✓ Evaluates expressions that use a global dict
- ✓ Evaluates expressions that use global and local dicts
- ✓ Evaluates simple expressions like ":eval('1+1')"
- ✓ Ignores whitespace inside the parentheses
- ✓ Returns empty string if cmd input is ":eval()"
- ✓ Returns empty string if cmd input is ":eval('')"
- ✓ Returns empty string if cmd input is ':eval("")'
+ ✓ need to write some
                                                                          [100%]
 
-============================= 34 passed in 0.70s ==============================
+============================= 16 passed in 0.64s ==============================
