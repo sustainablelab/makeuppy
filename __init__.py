@@ -11,4 +11,4 @@ user_opens_cmdline(key_pressed, key_mods) -> bool
 user_closes_cmdline(key_pressed) -> bool
 get_arg(swp) -> str
 """
-from .pygameapi import *
+from .makeuppy import *

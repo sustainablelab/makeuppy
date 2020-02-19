@@ -151,18 +151,18 @@
   {
     "colours":
     {
-      "selected_bg":"#998f84",
+      "selected_bg":"#d9cec3",
       "dark_bg":"#1c1b1a",
-      "normal_text":"#998f84",
+      "normal_text":"#d9cec3",
       "selected_text":"#1c1b1a"
     },
     "font":
     {
-        "name": "consolas",
-        "size": "14",
+        "name": "monotype",
+        "size": "18",
         "bold": "0",
         "italic": "0",
-        "regular_path": "font/consola.ttf"
+        "regular_path": "font/Consolas-Font/CONSOLAB.TTF"
     },
     "misc":
     {
