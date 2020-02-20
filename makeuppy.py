@@ -47,6 +47,105 @@ def set_cmd_mode(onoff_flag=True):
     global CMD
     CMD = onoff_flag
 
+Window = namedtuple('Window', [ 'cols', 'rows' ])
+
+def window_size(win):
+    """Return size of Window 'win' as tuple (width, height).
+
+    Behavior
+    --------
+    Window is a namedtuple with field names(cols,rows)
+    Returns tuple width,height
+
+    Parameters
+    ----------
+    'win'
+        type(win) is namedtuple 'pygameapi.Window'
+        Example: win = Window( cols=1200, rows=600 )
+    """
+    return (win.cols, win.rows)
+
+def get_fullscreen_Window(): # -> makeuppy.Window
+    """
+    Return the fullscreen window size as a makeuppy.Window.
+    Call this once at the beginning of the program and save this
+    size in a global `Window`.
+    Return to fullscreen using this global.
+
+    Context
+    -------
+    Call this at the beginning of the application. This is the
+    only time that 'pygame.display.Info()' returns the correct
+    screen size.
+
+    Use this window size later when switching to fullscreen.
+    Example:
+    """
+    gui_display = pygame.display.set_mode( # -> Surface
+        flags=(pygame.FULLSCREEN) # can't tell a difference setting additional flags
+        )
+    video_info = pygame.display.Info()
+    fullscreen_window = Window(cols=video_info.current_w, rows=video_info.current_h)
+    # print(f"video_info.current_w -> {video_info.current_w}")
+    # print(f"video_info.current_h -> {video_info.current_h}")
+    return fullscreen_window
+
+def make_screensize(size=(640, 480), is_fullscreen=False): # -> Surface
+    """Change GUI window to 'size' and control if 'fullscreen' is on/off.
+
+    For windowed (not fullscreen), application should:
+    - control window size using os.environ to set SDL environment variable
+    - set a caption for the window
+
+    Returns new 'Surface' created by 'pygame.display.set_mode()'
+
+    With no arguments, make_screensize() defaults to a 640x480 window.
+
+    Parameters
+    ----------
+    size:
+        tuple (cols, rows)
+        Instead of remembering if columns are width or height, use Window:
+        - make namedtuple: mywindow = makeuppy.Window
+        - pass the window size with makeuppy.window_size(mywindow)
+    is_fullsize:
+        bool
+        if True:
+            sets flag pygame.FULLSCREEN in call to pygame.display.set_mode()
+        if False:
+            puts icon in window
+
+    Example for windowed view
+    -------------------------
+    # Early in the program, set a window size to use when not fullscreen
+    # for passing later when creating UI elements
+    windowed = makeuppy.Window(cols=640, rows=480)
+    #...
+    # Later when switching window size:
+    make_screensize(makeuppy.window_size(windowed), is_fullscreen=False)
+
+    Example for fullscreen
+    ----------------------
+    # At start of program, get window size for fullscreen.
+    # This MUST go in a variable:
+    # The function returns wrong value after window is not fullscreen!
+    fullscreen = makeuppy.get_fullscreen_Window()
+    #...
+    # Later when switching window to fullscreen
+    make_screensize(makeuppy.window_size(fullscreen), is_fullscreen=True)
+    """
+    if is_fullscreen:
+        gui_display = pygame.display.set_mode( # -> Surface
+            size, # -> (width, height)
+            flags=(pygame.FULLSCREEN)
+            )
+    else:
+        gui_display = pygame.display.set_mode( # -> Surface
+            size # -> (width, height)
+            )
+        set_icon() # not visible if fullscreen
+    return gui_display
+
 _pygameapi_path = os.path.dirname(__file__)
 _costume_path = os.path.join(_pygameapi_path, 'costume')
 # ROOT_PATH = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -64,6 +163,161 @@ def new_ui_manager(gui_win, theme=f'{_costume_path}/theme.json'):
     I made this wrapper to set my default theme.json.
     """
     return pygame_gui.UIManager(window_size(gui_win), theme)
+
+def get_rect_height_for_gapless_cmdline(manager): # -> Int
+    """ Return rect height value in pixels so UITextEntryLine instances stack
+    vertically without gaps.
+
+    Use returned height value to eliminate gaps between vertically stacked
+    instances of UITextEntryLine. This makes the command line look like a single
+    entity.
+    
+    Context
+    -------
+    Application command line is made of two UITextEntryLine instances:
+        - cmdline respsone prints on bottom line
+        - user cmdline input is on top line
+    The two UITextEntryLine instances sit at the bottom of the window.
+
+    The font and font size are set in the theme.json file.
+    
+    Algorithm
+    ---------
+    Rectangle height for gapless stacking is found by adding 4 to the height of
+    any invisible character: \s, \t, \n
+
+    Parameters
+    ----------
+    manager:
+        Instance of pygame_gui.UIManager that controls the command line UI
+        elements.
+
+    Example
+    -------
+    # Earlier setup for sizing application window
+    # -------------------------------------------
+    # Find out the size for fullscreen
+    fullscreen = makeuppy.get_fullscreen_Window()
+    # When not fullscreen, use 640x480
+    windowed = makeuppy.Window(cols=640, rows=480)
+    # Decide if application starts in fullscreen
+    is_fullscreen = False
+    #
+    # ...
+    #
+    # Setting up GUI elements
+    # -----------------------
+    # Make a GUI manager
+    manager = makeuppy.new_ui_manager(fullscreen if is_fullscreen else windowed)
+    cmdline_height = makeuppy.get_rect_height_for_gapless_cmdline(manager)
+    """
+    dummy = pygame_gui.elements.ui_text_entry_line.UITextEntryLine(
+        relative_rect=pygame.Rect(
+            (0,0), # rect left,top
+            (50,0), # rect width,height (height set by font-size)
+            ),
+        manager=manager
+        )
+    # Find out the tallest character:
+    height = dummy.font.size('\n')[1] + 4
+    '''
+    Example heights
+    ---------------
+    Consolas 14 pt: 19 pixels tall
+    Consolas 18 pt: 23 pixels tall
+    '''
+    dummy.kill()
+    return height
+
+def make_cmdline(manager, current_Window, stack_level): # -> UITextEntryLine
+    """Return UI element for a part of the command line.
+
+    Parameters
+    ----------
+    manager:
+        ui_manager that controls this UI element
+
+    current_Window:
+        type: namedtuple makeuppy.Window
+        UI element width is sized to fill the width of this
+        Window.
+        Use the current window setting (either fullscreen or a
+        640x480 window) so that the element fills the current
+        window.
+
+    stack_level:
+        type: int
+        stack_level=1: bottom line, e.g., the command output
+        stack_level=2: next line up, e.g., the command input
+
+    Returns an instance of UITextEntryLine.
+
+    Appearance
+    ----------
+    'ui_text_entry_line.py' see '# colours from theme'
+    Color (Colour):
+        Normal text:
+        text_colour: normal_text, use 'lightgravel'
+        background_colour: dark_bg, use 'blackgravel'
+        Selected text: (inverse of normal text)
+        selected_text_colour: selected_text, use 'blackgravel'
+        selected_bg_colour: selected_bg, use 'lightgravel'
+
+    Font
+        Not sure how to select when to use regular/bold/italic,
+        etc. Just picking ones I like and using them as the
+        "regular_path" in theme.json.
+
+        "size": "18",
+        "regular_path": "font/Consolas-Font/CONSOLAB.TTF"
+        B is for bold.
+
+        Font file must be placed in this path relative to the
+        application:
+            font/
+        And application must be run with pwd set to its folder
+        for this relative path to work.
+
+        Get fonts without licensing issues
+        ----------------------------------
+        Download free fonts from these two sites. Check license
+        before downloading.
+
+        https://freefontsfamily.com/
+        https://www.1001freefonts.com/
+
+        Do not use built-in Windows fonts because you are not
+        allowed to distribute the built-in Windows fonts with
+        software, and I'm not sure how to set the font without
+        putting a copy of it in with this application.
+    """
+    cmdline = pygame_gui.elements.ui_text_entry_line.UITextEntryLine(
+        relative_rect=pygame.Rect(
+            (0,current_Window.rows-stack_level*get_rect_height_for_gapless_cmdline(manager)), # left,top is at bottom-left corner of window
+            (current_Window.cols,0), # width, height is at full-width, height set by font-size (input ignored)
+            ),
+        manager=manager
+        )
+    return cmdline
+
+def resize_cmdline(cmdline_ui_element, current_Window, stack_level, manager):
+    """Resize by kill and make again. Preserve text and color.
+
+    TODO
+    ----
+    Make cmdline into an obejct so the trailing parameters are
+    all know from the object itself:
+    - current_Window
+    - stack_level
+    - manager that owns this ui element
+    """
+    save_text = cmdline_ui_element.get_text()
+    save_textcolour = cmdline_ui_element.text_colour
+    cmdline_ui_element.kill()
+    cmdline = make_cmdline(manager, current_Window, stack_level)
+    cmdline.set_text(save_text)
+    cmdline.text_colour = save_textcolour
+    return cmdline
 
 def user_quit(event, key_pressed, key_mods):
     """
@@ -283,24 +537,6 @@ def evaluate(cmd):
     # TODO: add more checks here for other types of cmdline entry
     # else: return None # unnecessary, but it makes an explicit placeholder
     else: return 'ERROR: Start commands with colon (:)'
-
-Window = namedtuple('Window', [ 'cols', 'rows' ])
-
-def window_size(win):
-    """Return size of Window 'win' as tuple (width, height).
-
-    Behavior
-    --------
-    Window is a namedtuple with field names(cols,rows)
-    Returns tuple width,height
-
-    Parameters
-    ----------
-    'win'
-        type(win) is namedtuple 'pygameapi.Window'
-        Example: win = Window( cols=1200, rows=600 )
-    """
-    return (win.cols, win.rows)
 
 # Credit color scheme to Steve Losh, author of badwolf.vim
 _badwolf_color_names = [
