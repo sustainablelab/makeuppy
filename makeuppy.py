@@ -518,20 +518,25 @@ def evaluate(cmd):
     if cmd.startswith(':'):
         # strip leading `:`
         cmd = cmd[1:]
-        if cmd[0:4] == 'eval': return empty
-        # TODO: add more checks here for other COLON commands
         if cmd == 'q':
             # Return a user event same as quitting
             return empty
-        if cmd.startswith('echo'):
+        elif cmd.startswith('echo'):
             args = cmd.lstrip('echo').strip()
             try: return eval(args)
             except: return "ERROR: " + str(sys.exc_info()[1])
+        if cmd.startswith('eval'):
+            '''Eval is more useful when called by the application.'''
+            # TODO: what is the implication of returning ''?
+            return empty
+        # TODO: add more checks here for other COLON commands
         if cmd == 'start':
             # Application returns a user event the same as the
             # START button press.
             # This package just returns a message.
             return 'OK: Starting monochromator sweep...'
+        elif cmd == 'test':
+            return empty # let application output what it wants
         # else: return None # unnecessary, but it makes an explicit placeholder
         else: return 'ERROR: Command not recognized'
     # TODO: add more checks here for other types of cmdline entry
