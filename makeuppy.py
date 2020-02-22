@@ -305,14 +305,22 @@ def resize_cmdline(cmdline_ui_element, current_Window, stack_level, manager):
 
     TODO
     ----
-    Make cmdline into an obejct so the trailing parameters are
+    Make cmdline into an object so the trailing parameters are
     all know from the object itself:
     - current_Window
     - stack_level
     - manager that owns this ui element
+
+    TODO
+    ----
+    There's got to be a better way than killing.
+    If an element was in focus, killing forces me to lose focus
+    when I toggle fullscreen. The equivalent of hitting Esc.
     """
     save_text = cmdline_ui_element.get_text()
     save_textcolour = cmdline_ui_element.text_colour
+    # Lose focus before killing or the manager cannot focus again.
+    if cmdline_ui_element.selected: manager.unselect_focus_element()
     cmdline_ui_element.kill()
     cmdline = make_cmdline(manager, current_Window, stack_level)
     cmdline.set_text(save_text)
@@ -511,37 +519,7 @@ def evaluate(cmd):
                     # Strip the "OK: " from the response message
                     response = response.lstrip('OK: ')
     """
-    # Catch 0-length commands (happens if user erases ':' and hits ENTER)
-    empty = ''
-    if len(cmd) == 0: return empty
-    # COLON commands
-    if cmd.startswith(':'):
-        # strip leading `:`
-        cmd = cmd[1:]
-        if cmd == 'q':
-            # Return a user event same as quitting
-            return empty
-        elif cmd.startswith('echo'):
-            args = cmd.lstrip('echo').strip()
-            try: return eval(args)
-            except: return "ERROR: " + str(sys.exc_info()[1])
-        if cmd.startswith('eval'):
-            '''Eval is more useful when called by the application.'''
-            # TODO: what is the implication of returning ''?
-            return empty
-        # TODO: add more checks here for other COLON commands
-        if cmd == 'start':
-            # Application returns a user event the same as the
-            # START button press.
-            # This package just returns a message.
-            return 'OK: Starting monochromator sweep...'
-        elif cmd == 'test':
-            return empty # let application output what it wants
-        # else: return None # unnecessary, but it makes an explicit placeholder
-        else: return 'ERROR: Command not recognized'
-    # TODO: add more checks here for other types of cmdline entry
-    # else: return None # unnecessary, but it makes an explicit placeholder
-    else: return 'ERROR: Start commands with colon (:)'
+    pass
 
 # Credit color scheme to Steve Losh, author of badwolf.vim
 _badwolf_color_names = [
