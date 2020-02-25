@@ -299,6 +299,33 @@ def make_cmdline(manager, current_Window, stack_level): # -> UITextEntryLine
         manager=manager
         )
     return cmdline
+def make_textbox_fullheight_rightside(manager, current_Window, html_text, width):
+    cmdline_height = 2*get_rect_height_for_gapless_cmdline(manager)
+    return pygame_gui.elements.ui_text_box.UITextBox(
+        html_text=html_text,
+        relative_rect=pygame.Rect(
+            (current_Window.cols-width,0), # left,top is at top-right of window
+            (width,current_Window.rows-cmdline_height), # width, height
+            ),
+        manager=manager,
+        wrap_to_height=False
+        )
+
+def resize_textbox_fullheight_rightside(ui_textbox, current_Window, manager):
+    """Resize by kill and make again. Preserve text and width."""
+    save_text = ui_textbox.html_text
+    save_width = ui_textbox.relative_rect.width
+    # save_textcolour = ui_textbox.text_colour
+    ui_textbox.kill()
+    new = make_textbox_fullheight_rightside(
+        manager,
+        current_Window,
+        html_text=save_text,
+        width=save_width
+        )
+    # ui_textbox.set_text(save_text)
+    # ui_textbox.text_colour = save_textcolour
+    return ui_textbox
 
 def resize_cmdline(cmdline_ui_element, current_Window, stack_level, manager):
     """Resize by kill and make again. Preserve text and color.
