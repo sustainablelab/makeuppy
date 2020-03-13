@@ -1,6 +1,6 @@
 import pygame
 import pygame_gui
-from collections import namedtuple
+from collections import namedtuple # assumes Python 3.8
 import sys # catch and return eval errors as string instead of halting
 import os # get path to this package
 
@@ -89,6 +89,28 @@ def get_fullscreen_Window(): # -> makeuppy.Window
     # print(f"video_info.current_w -> {video_info.current_w}")
     # print(f"video_info.current_h -> {video_info.current_h}")
     return fullscreen_window
+
+def make_window(cols=640, rows=480):
+    '''Return a pygame Surface for the main window.
+
+    Simple interface without the full-screen option.
+
+    Returns new 'Surface' created by 'pygame.display.set_mode()'.
+    The window is initialized for display.
+    `set_mode()` is the call that makes the window appear.
+
+    Usage
+    -----
+    mukpy.make_window(cols=1030, rows=550) # window appears
+
+    Example
+    -------
+    See "example-open-window.py".
+    Do not call this command on its own in the REPL.
+    Instead, run the example script.
+    '''
+    return pygame.display.set_mode(size=(cols,rows))
+
 
 def make_screensize(size=(640, 480), is_fullscreen=False): # -> Surface
     """Change GUI window to 'size' and control if 'fullscreen' is on/off.
@@ -669,11 +691,24 @@ ColorRGB = namedtuple(
     _badwolf_color_names,
     defaults=_badwolf_color_RGB_values
     )
+'''Example: use an RGB color by name.
+>>> import makeuppy as mukpy
+>>> color_rgb = mukpy.ColorRGB()
+>>> color_rgb.tardis
+(10, 157, 255)
+'''
+
 ColorHEX = namedtuple(
     'ColorHEX',
     _badwolf_color_names,
     defaults=_badwolf_color_HEX_values
     )
+'''Example: use a HEX color by name.
+>>> import makeuppy as mukpy
+>>> color_hex = mukpy.ColorHEX()
+>>> color_hex.tardis
+'#0a9dff'
+'''
 
 # ---Helpers---
 def _dev(condition=True): return DEV and condition
